@@ -9,15 +9,28 @@ export default function GitHubStep({ onNext, onBack }) {
   const [username, setUsername] = useState(profile.github || "");
   const [loading, setLoading] = useState(false);
 
+  // Extract username from GitHub URL or return as-is
+  const extractUsername = (input) => {
+    const trimmed = input.trim();
+    // Handle full GitHub URLs like https://github.com/username or github.com/username
+    const urlMatch = trimmed.match(/github\.com\/([^\/\s]+)/);
+    if (urlMatch) return urlMatch[1];
+    // Handle @username format
+    if (trimmed.startsWith("@")) return trimmed.slice(1);
+    // Return as-is (assume it's already a username)
+    return trimmed;
+  };
+
   const fetchRepos = async () => {
     if (!username.trim()) {
-      toast.error("Enter a GitHub username");
+      toast.error("Enter a GitHub username or URL");
       return;
     }
+    const extractedUsername = extractUsername(username);
     setLoading(true);
     try {
       const { data } = await axios.post(`${API_BASE}/github/analyze`, {
-        username: username.trim(),
+        username: extractedUsername,
         jdAnalysis: jdData || {},
       });
       setGithubRepos(data.repos || []);
@@ -48,8 +61,8 @@ export default function GitHubStep({ onNext, onBack }) {
     score >= 70 ? "text-green-600" : score >= 40 ? "text-yellow-600" : "text-red-500";
 
   return (
-    <div className="space-y-5">
-      <p className="text-sm text-slate-500">
+    <div className="flex flex-col gap-5">
+      <p className="text-sm text-slate-500 dark:text-slate-400">
         We'll fetch your GitHub repos and rank them by relevance to the job description.
         Select up to 4 projects to include in your resume.
       </p>
@@ -84,10 +97,10 @@ export default function GitHubStep({ onNext, onBack }) {
       {githubRepos.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-slate-700">
+            <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300">
               Select Projects ({selectedRepos.length}/4)
             </h3>
-            <span className="text-xs text-slate-400">
+            <span className="text-xs text-slate-400 dark:text-slate-500">
               Sorted by JD relevance
             </span>
           </div>
@@ -98,22 +111,22 @@ export default function GitHubStep({ onNext, onBack }) {
               onClick={() => toggleRepo(repo)}
               className={`border-2 rounded-xl p-4 cursor-pointer transition-all ${
                 isSelected(repo)
-                  ? "border-blue-500 bg-blue-50 shadow-sm"
-                  : "border-slate-200 hover:border-blue-300 bg-white"
+                  ? "border-blue-500 bg-blue-50 dark:bg-blue-500/10 shadow-sm"
+                  : "border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-500/50 bg-white dark:bg-slate-900"
               }`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   {/* Repo name + type badge */}
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-bold text-slate-800 text-sm">
+                    <span className="font-bold text-slate-800 dark:text-slate-100 text-sm">
                       {repo.name}
                     </span>
-                    <span className="badge bg-slate-100 text-slate-500 text-xs">
+                    <span className="badge bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs">
                       {repo.type}
                     </span>
                     {isSelected(repo) && (
-                      <span className="badge bg-blue-100 text-blue-700 text-xs">
+                      <span className="badge bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 text-xs">
                         ✓ Selected
                       </span>
                     )}
@@ -121,7 +134,7 @@ export default function GitHubStep({ onNext, onBack }) {
 
                   {/* Description */}
                   {repo.description && (
-                    <p className="text-xs text-slate-500 mt-1 truncate">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 truncate">
                       {repo.description}
                     </p>
                   )}
@@ -132,7 +145,7 @@ export default function GitHubStep({ onNext, onBack }) {
                       {repo.languages.slice(0, 5).map(lang => (
                         <span
                           key={lang}
-                          className="badge bg-purple-50 text-purple-700 border border-purple-200 text-xs"
+                          className="badge bg-purple-50 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-500/30 text-xs"
                         >
                           {lang}
                         </span>
@@ -146,8 +159,8 @@ export default function GitHubStep({ onNext, onBack }) {
                   <div className={`text-lg font-black ${scoreColor(repo.relevanceScore)}`}>
                     {repo.relevanceScore}%
                   </div>
-                  <div className="text-xs text-slate-400">relevance</div>
-                  <div className="mt-1 text-xs text-slate-400">
+                  <div className="text-xs text-slate-400 dark:text-slate-500">relevance</div>
+                  <div className="mt-1 text-xs text-slate-400 dark:text-slate-500">
                     ⭐ {repo.stars}  🔀 {repo.forks}
                   </div>
                 </div>
@@ -159,8 +172,8 @@ export default function GitHubStep({ onNext, onBack }) {
 
       {/* Skip option */}
       {githubRepos.length === 0 && (
-        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-center">
-          <p className="text-sm text-slate-500 mb-3">
+        <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 text-center">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">
             No GitHub account? You can skip this step — AI will generate
             project examples based on your skills.
           </p>
@@ -168,7 +181,7 @@ export default function GitHubStep({ onNext, onBack }) {
       )}
 
       {/* Navigation */}
-      <div className="flex gap-3 pt-2">
+      <div className="flex gap-3 pt-3 -mx-6 px-6 sticky bottom-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur border-t border-slate-200/70 dark:border-slate-800/70">
         <button onClick={onBack} className="btn-secondary flex-1">
           ← Back
         </button>

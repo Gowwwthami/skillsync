@@ -1,8 +1,4 @@
-// frontend/src/constants/index.js
-// ─────────────────────────────────────────────────────────────
-// SINGLE SOURCE OF TRUTH — import everything from here
-// Never hardcode these values in any other file
-// ─────────────────────────────────────────────────────────────
+
 
 // ── App Branding ──────────────────────────────────────────────
 export const APP_NAME         = "SkillSync";
@@ -20,23 +16,37 @@ export const CLAUDE_MAX_TOKENS = 1500;
 
 // ── Resume Templates ──────────────────────────────────────────
 export const TEMPLATES = {
+  atsClassic: {
+    id: "atsClassic",
+    name: "ATS Classic",
+    description: "Single-column, no colors, crisp hierarchy for ATS",
+    accent: "#111827",
+    recommended: true,
+    atsSafe: true,
+  },
   modern: {
     id: "modern",
     name: "Modern",
-    description: "Bold headers, blue accents, two-column sidebar",
+    description: "Two-column, bold headings, modern layout",
     accent: "#2563eb",
+    recommended: false,
+    atsSafe: true,
   },
   minimalist: {
     id: "minimalist",
     name: "Minimalist ATS",
     description: "Ultra-clean, single-column, maximum ATS compatibility",
     accent: "#111827",
+    recommended: true,
+    atsSafe: true,
   },
   elegant: {
     id: "elegant",
     name: "Elegant Professional",
-    description: "Refined typography, purple accents, classic feel",
+    description: "Refined typography, classic layout",
     accent: "#7c3aed",
+    recommended: false,
+    atsSafe: true,
   },
 };
 

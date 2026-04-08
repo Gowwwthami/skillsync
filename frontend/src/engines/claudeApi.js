@@ -3,7 +3,7 @@
 // Falls back to Claude if VITE_ANTHROPIC_KEY has credits
 
 const GROQ_API    = "https://api.groq.com/openai/v1/chat/completions";
-const GROQ_MODEL  = "llama3-8b-8192";
+const GROQ_MODEL  = "llama-3.1-8b-instant";
 
 import { ACTION_VERBS } from "../constants";
 
@@ -38,8 +38,9 @@ async function callGroq(systemPrompt, userPrompt, maxTokens = 1500) {
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
+    console.error("Groq API Error Response:", err);
     throw new Error(
-      err?.error?.message || `Groq API error: ${res.status}`
+      err?.error?.message || err?.message || `Groq API error: ${res.status}`
     );
   }
 

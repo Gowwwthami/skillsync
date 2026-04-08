@@ -18,6 +18,7 @@ export default function GenerateStep({ onNext, onBack }) {
     profile, jdData, selectedRepos,
     resume, setResume,
     setAtsScore,
+    uploadedPdf,
   } = useResume();
 
   const [loading, setLoading] = useState(false);
@@ -60,10 +61,20 @@ export default function GenerateStep({ onNext, onBack }) {
 
   return (
     <div className="space-y-6">
+      {uploadedPdf && (
+        <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl p-4">
+          <p className="text-sm text-amber-800 dark:text-amber-300 font-semibold">
+            Original PDF mode enabled
+          </p>
+          <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
+            We will export your uploaded PDF as the final output.
+          </p>
+        </div>
+      )}
 
       {/* Summary of what will be generated */}
-      <div className="bg-slate-50 border border-slate-100 rounded-xl p-5 space-y-3">
-        <h3 className="text-sm font-bold text-slate-700 mb-3">
+      <div className="bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl p-5 space-y-3">
+        <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-3">
           Resume Generation Summary
         </h3>
 
@@ -103,15 +114,15 @@ export default function GenerateStep({ onNext, onBack }) {
         ].map(item => (
           <div key={item.label} className="flex items-center gap-3">
             <span className="text-base w-6 text-center">{item.icon}</span>
-            <span className="text-sm text-slate-500 w-36">{item.label}</span>
-            <span className="text-sm font-semibold text-slate-800">{item.value}</span>
+            <span className="text-sm text-slate-500 dark:text-slate-400 w-36">{item.label}</span>
+            <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">{item.value}</span>
           </div>
         ))}
       </div>
 
       {/* What Claude will do */}
-      <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
-        <h3 className="text-xs font-bold text-blue-700 uppercase tracking-wide mb-2">
+      <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 rounded-xl p-4">
+        <h3 className="text-xs font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wide mb-2">
           What Claude AI will do
         </h3>
         <ul className="space-y-1.5">
@@ -122,8 +133,8 @@ export default function GenerateStep({ onNext, onBack }) {
             "Generate a professional summary for the target role",
             "Start every bullet with a strong action verb",
           ].map((item, i) => (
-            <li key={i} className="flex items-start gap-2 text-sm text-blue-700">
-              <span className="text-blue-400 mt-0.5">→</span>
+            <li key={i} className="flex items-start gap-2 text-sm text-blue-700 dark:text-blue-300">
+              <span className="text-blue-400 dark:text-blue-500 mt-0.5">→</span>
               {item}
             </li>
           ))}
@@ -132,17 +143,17 @@ export default function GenerateStep({ onNext, onBack }) {
 
       {/* Progress indicator */}
       {loading && (
-        <div className="bg-white border border-slate-200 rounded-xl p-5 text-center animate-fade-in">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 text-center animate-fade-in">
           <div className="flex justify-center mb-4">
             <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
           </div>
-          <p className="text-sm font-semibold text-slate-700 mb-1">
+          <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1">
             {PROGRESS_STEPS[progressIdx]}
           </p>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-400 dark:text-slate-500">
             This takes about 15–20 seconds
           </p>
-          <div className="mt-3 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+          <div className="mt-3 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
             <div
               className="h-full bg-blue-600 rounded-full transition-all duration-700"
               style={{ width: `${((progressIdx + 1) / PROGRESS_STEPS.length) * 100}%` }}
@@ -153,11 +164,11 @@ export default function GenerateStep({ onNext, onBack }) {
 
       {/* Already generated notice */}
       {resume && !loading && (
-        <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3">
+        <div className="bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/20 rounded-xl p-4 flex items-center gap-3">
           <span className="text-green-500 text-xl">✓</span>
           <div>
-            <p className="text-sm font-semibold text-green-800">Resume already generated</p>
-            <p className="text-xs text-green-600">Click Continue or regenerate below</p>
+            <p className="text-sm font-semibold text-green-800 dark:text-green-300">Resume already generated</p>
+            <p className="text-xs text-green-600 dark:text-green-400">Click Continue or regenerate below</p>
           </div>
         </div>
       )}
@@ -168,7 +179,11 @@ export default function GenerateStep({ onNext, onBack }) {
           ← Back
         </button>
 
-        {resume && !loading ? (
+        {uploadedPdf ? (
+          <button onClick={onNext} className="btn-primary flex-1">
+            Continue →
+          </button>
+        ) : resume && !loading ? (
           <button onClick={onNext} className="btn-primary flex-1">
             Continue →
           </button>
@@ -190,7 +205,7 @@ export default function GenerateStep({ onNext, onBack }) {
       {resume && !loading && (
         <button
           onClick={handleGenerate}
-          className="w-full text-xs text-slate-400 hover:text-slate-600 transition-colors py-1"
+          className="w-full text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors py-1"
         >
           🔄 Regenerate resume
         </button>

@@ -5,7 +5,15 @@ const ResumeContext = createContext(null);
 const initialProfile = {
   name: "", email: "", phone: "", location: "", title: "",
   github: "", linkedin: "", leetcode: "", summary: "",
-  skills: [], education: [], achievements: [], experience: [],
+  skills: [], education: [], achievements: [], experience: [], projects: [],
+};
+
+const initialFormatAnalysis = {
+  sectionOrder: ["summary", "experience", "education", "skills", "projects"],
+  layoutStyle: "single-column",
+  emphasisStyle: "moderate",
+  contentDensity: "standard",
+  colorScheme: "monochrome",
 };
 
 export function ResumeProvider({ children }) {
@@ -16,8 +24,11 @@ export function ResumeProvider({ children }) {
   const [githubRepos, setGithubRepos] = useState([]);
   const [selectedRepos, setSelectedRepos] = useState([]);
   const [resume, setResume] = useState(null);
-  const [selectedTemplate, setSelectedTemplate] = useState("modern");
+  const [uploadedPdf, setUploadedPdf] = useState(null);
+  const [selectedTemplate, setSelectedTemplate] = useState("atsClassic");
   const [atsScore, setAtsScore] = useState(null);
+  const [originalFormat, setOriginalFormat] = useState(initialFormatAnalysis);
+  const [useOriginalFormat, setUseOriginalFormat] = useState(false);
 
   const reset = () => {
     setStep(0);
@@ -27,8 +38,11 @@ export function ResumeProvider({ children }) {
     setGithubRepos([]);
     setSelectedRepos([]);
     setResume(null);
-    setSelectedTemplate("modern");
+    setUploadedPdf(null);
+    setSelectedTemplate("atsClassic");
     setAtsScore(null);
+    setOriginalFormat(initialFormatAnalysis);
+    setUseOriginalFormat(false);
   };
 
   return (
@@ -40,8 +54,11 @@ export function ResumeProvider({ children }) {
       githubRepos, setGithubRepos,
       selectedRepos, setSelectedRepos,
       resume, setResume,
+      uploadedPdf, setUploadedPdf,
       selectedTemplate, setSelectedTemplate,
       atsScore, setAtsScore,
+      originalFormat, setOriginalFormat,
+      useOriginalFormat, setUseOriginalFormat,
       reset,
     }}>
       {children}

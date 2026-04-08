@@ -14,11 +14,21 @@ router.get("/profile", protect, async (req, res, next) => {
 // PUT /api/users/profile
 router.put("/profile", protect, async (req, res, next) => {
   try {
-    const allowed = ["profile"];
+    const allowedProfileFields = [
+      "title", "phone", "location", "summary", "github",
+      "linkedin", "leetcode", "skills", "education", "achievements", "experience",
+      "projects"
+    ];
+    
     const updates = {};
-    allowed.forEach(key => {
-      if (req.body[key] !== undefined) updates[key] = req.body[key];
+    allowedProfileFields.forEach(field => {
+      if (req.body[field] !== undefined) {
+        updates[`profile.${field}`] = req.body[field];
+      }
     });
+
+    // Also allow updating name
+    if (req.body.name) updates.name = req.body.name;
 
     const user = await User.findByIdAndUpdate(
       req.user._id,

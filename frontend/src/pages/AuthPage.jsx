@@ -1,17 +1,32 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { APP_NAME, APP_TAGLINE } from "../constants";
+import ThemeToggle from "../components/ui/ThemeToggle";
 import toast from "react-hot-toast";
 
 export default function AuthPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { login, register, user } = useAuth();
+  const { login, register, forgotPassword, verifyOTP, resetPassword, googleAuth, user } = useAuth();
+  const googleButtonRef = useRef(null);
 
   // Read ?mode=login or ?mode=register from URL
   const [isLogin, setIsLogin] = useState(searchParams.get("mode") !== "register");
   const [loading, setLoading] = useState(false);
+
+  // Password visibility states
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Forgot password modal state
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotStep, setForgotStep] = useState(1); // 1: email, 2: OTP, 3: new password
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotOTP, setForgotOTP] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
@@ -33,6 +48,51 @@ export default function AuthPage() {
     setErrors({});
     setForm({ name: "", email: "", password: "", confirmPassword: "" });
   }, [searchParams]);
+
+  const googleInitialized = useRef(false);
+
+  const handleGoogleCallback = useCallback(async (response) => {
+    setLoading(true);
+    try {
+      await googleAuth(response.credential);
+      toast.success(isLogin ? "Welcome back! 👋" : "Account created! Let's build your resume 🚀");
+      navigate("/dashboard");
+    } catch (err) {
+      const msg = err?.response?.data?.error || "Google sign-in failed. Try again.";
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
+  }, [googleAuth, isLogin, navigate]);
+
+  // Initialize Google Sign-In once
+  useEffect(() => {
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      console.error("VITE_GOOGLE_CLIENT_ID is missing");
+      return;
+    }
+    if (!window.google || !googleButtonRef.current) return;
+    if (!googleInitialized.current) {
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: handleGoogleCallback,
+      });
+      googleInitialized.current = true;
+    }
+  }, [handleGoogleCallback]);
+
+  // Render Google button when mode changes
+  useEffect(() => {
+    if (!window.google || !googleButtonRef.current) return;
+    googleButtonRef.current.innerHTML = "";
+    window.google.accounts.id.renderButton(googleButtonRef.current, {
+      theme: "outline",
+      size: "large",
+      width: 280,
+      text: isLogin ? "signin_with" : "signup_with",
+    });
+  }, [isLogin]);
 
   const update = (field, value) => {
     setForm(f => ({ ...f, [field]: value }));
@@ -79,39 +139,118 @@ export default function AuthPage() {
     navigate(`/auth?mode=${loginMode ? "login" : "register"}`);
   };
 
+  // Forgot password handlers
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    if (!forgotEmail.trim() || !/\S+@\S+\.\S+/.test(forgotEmail)) {
+      toast.error("Please enter a valid email");
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      await forgotPassword(forgotEmail);
+      toast.success("OTP sent to your email!");
+      setForgotStep(2);
+    } catch (err) {
+      const msg = err?.response?.data?.error || "Failed to send OTP. Try again.";
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOTP = async (e) => {
+    e.preventDefault();
+    if (!forgotOTP || forgotOTP.length !== 6) {
+      toast.error("Please enter a valid 6-digit OTP");
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      await verifyOTP(forgotEmail, forgotOTP);
+      toast.success("OTP verified!");
+      setForgotStep(3);
+    } catch (err) {
+      const msg = err?.response?.data?.error || "Invalid OTP. Try again.";
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    if (newPassword.length < 8) {
+      toast.error("Password must be at least 8 characters");
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      await resetPassword(forgotEmail, forgotOTP, newPassword);
+      toast.success("Password reset successfully! Welcome back! 👋");
+      setShowForgotModal(false);
+      setForgotStep(1);
+      setForgotEmail("");
+      setForgotOTP("");
+      setNewPassword("");
+      setConfirmNewPassword("");
+      navigate("/dashboard");
+    } catch (err) {
+      const msg = err?.response?.data?.error || "Failed to reset password. Try again.";
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const closeForgotModal = () => {
+    setShowForgotModal(false);
+    setForgotStep(1);
+    setForgotEmail("");
+    setForgotOTP("");
+    setNewPassword("");
+    setConfirmNewPassword("");
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/40 to-purple-50/40 flex">
+    <div className="min-h-screen bg-white dark:bg-slate-950 flex">
 
       {/* ── Left Panel (desktop only) ───────────────────────── */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-600 to-purple-700 p-12 flex-col justify-between">
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-500 to-purple-600 p-12 flex-col justify-between">
 
         {/* Logo */}
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-            <span className="text-white font-black">SS</span>
+            <span className="text-white font-black">S</span>
           </div>
           <span className="text-white text-xl font-black">SkillSync</span>
         </div>
 
         {/* Center content */}
         <div>
-          <h2 className="text-4xl font-black text-white leading-tight mb-4">
-            {APP_TAGLINE}
+          <h2 className="text-3xl font-bold text-white leading-tight mb-4">
+            AI-Powered Resume Builder
           </h2>
-          <p className="text-blue-100 text-lg mb-10">
-            AI-powered resumes tailored to every job description.
-            Built for engineers who want to get hired faster.
+          <p className="text-blue-100 text-base mb-8">
+            Paste any job description. We analyze it with AI and build a tailored, ATS-optimized resume.
           </p>
 
           {/* Feature list */}
           {[
-            "Analyzes job descriptions with Claude AI",
-            "Matches your GitHub projects automatically",
-            "Generates ATS-optimized bullets with metrics",
-            "Scores your resume before you apply",
+            "AI analyzes job descriptions",
+            "Auto-matches GitHub projects",
+            "ATS-optimized content",
+            "Export PDF instantly",
           ].map((f) => (
-            <div key={f} className="flex items-center gap-3 mb-3">
-              <div className="w-5 h-5 rounded-full bg-green-400 flex items-center justify-center flex-shrink-0">
+            <div key={f} className="flex items-center gap-3 mb-2">
+              <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
                 <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                 </svg>
@@ -121,47 +260,42 @@ export default function AuthPage() {
           ))}
         </div>
 
-        {/* Bottom quote */}
-        <div className="bg-white/10 rounded-2xl p-5 border border-white/20">
-          <p className="text-white text-sm italic">
-            "SkillSync helped me land interviews at 3 FAANG companies
-            by perfectly matching my resume to each job description."
-          </p>
-          <div className="mt-3 flex items-center gap-2">
-            <div className="w-7 h-7 rounded-full bg-blue-400 flex items-center justify-center text-white text-xs font-bold">A</div>
-            <div>
-              <div className="text-white text-xs font-semibold">Arjun M.</div>
-              <div className="text-blue-200 text-xs">Software Engineer</div>
-            </div>
-          </div>
+        {/* Bottom */}
+        <div className="text-blue-200 text-sm">
+          © {new Date().getFullYear()} SkillSync
         </div>
       </div>
 
       {/* ── Right Panel — Auth Form ─────────────────────────── */}
-      <div className="flex-1 flex items-center justify-center p-6">
+      <div className="flex-1 flex items-center justify-center p-6 relative">
+        {/* Theme toggle */}
+        <div className="absolute top-4 right-4">
+          <ThemeToggle />
+        </div>
+        
         <div className="w-full max-w-md">
 
           {/* Mobile logo */}
           <div className="lg:hidden flex items-center gap-2 mb-8 justify-center">
-            <div className="w-9 h-9 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
-              <span className="text-white font-black text-sm">SS</span>
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
+              <span className="text-white font-black text-sm">S</span>
             </div>
-            <span className="text-xl font-black">
-              Skill<span className="text-blue-600">Sync</span>
+            <span className="text-xl font-bold">
+              Skill<span className="text-blue-500">Sync</span>
             </span>
           </div>
 
           {/* Card */}
-          <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-8">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 p-8">
 
             {/* Tab switcher */}
-            <div className="flex bg-slate-100 rounded-xl p-1 mb-6">
+            <div className="flex bg-slate-100 dark:bg-slate-800 rounded-xl p-1 mb-6">
               <button
                 onClick={() => switchMode(true)}
                 className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all ${
                   isLogin
-                    ? "bg-white text-blue-600 shadow-sm"
-                    : "text-slate-500 hover:text-slate-700"
+                    ? "bg-white dark:bg-slate-700 text-blue-500 shadow-sm"
+                    : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
                 }`}
               >
                 Log In
@@ -170,8 +304,8 @@ export default function AuthPage() {
                 onClick={() => switchMode(false)}
                 className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all ${
                   !isLogin
-                    ? "bg-white text-blue-600 shadow-sm"
-                    : "text-slate-500 hover:text-slate-700"
+                    ? "bg-white dark:bg-slate-700 text-blue-500 shadow-sm"
+                    : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
                 }`}
               >
                 Sign Up
@@ -179,14 +313,24 @@ export default function AuthPage() {
             </div>
 
             {/* Heading */}
-            <h1 className="text-2xl font-black text-slate-800 mb-1">
+            <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-1">
               {isLogin ? "Welcome back" : "Create your account"}
             </h1>
-            <p className="text-slate-400 text-sm mb-6">
+            <p className="text-slate-400 dark:text-slate-500 text-sm mb-6">
               {isLogin
                 ? "Log in to continue building your resume"
                 : "Start building ATS-optimized resumes for free"}
             </p>
+
+            {/* Google Sign In Button */}
+            <div ref={googleButtonRef} className="w-full mb-4"></div>
+
+            {/* Divider */}
+            <div className="flex items-center gap-3 my-5">
+              <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
+              <span className="text-xs text-slate-400 dark:text-slate-500">or continue with email</span>
+              <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
+            </div>
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -221,16 +365,29 @@ export default function AuthPage() {
                 {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
               </div>
 
-              {/* Password */}
+              {/* Password with visibility toggle */}
               <div>
                 <label className="label">Password</label>
-                <input
-                  type="password"
-                  value={form.password}
-                  onChange={e => update("password", e.target.value)}
-                  placeholder={isLogin ? "Your password" : "Minimum 8 characters"}
-                  className={`input ${errors.password ? "border-red-400 focus:ring-red-400" : ""}`}
-                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={form.password}
+                    onChange={e => update("password", e.target.value)}
+                    placeholder={isLogin ? "Your password" : "Minimum 8 characters"}
+                    className={`input pr-10 ${errors.password ? "border-red-400 focus:ring-red-400" : ""}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    {showPassword ? (
+                      <EyeOffIcon className="w-5 h-5" />
+                    ) : (
+                      <EyeIcon className="w-5 h-5" />
+                    )}
+                  </button>
+                </div>
                 {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
               </div>
 
@@ -238,13 +395,26 @@ export default function AuthPage() {
               {!isLogin && (
                 <div>
                   <label className="label">Confirm Password</label>
-                  <input
-                    type="password"
-                    value={form.confirmPassword}
-                    onChange={e => update("confirmPassword", e.target.value)}
-                    placeholder="Repeat your password"
-                    className={`input ${errors.confirmPassword ? "border-red-400 focus:ring-red-400" : ""}`}
-                  />
+                  <div className="relative">
+                    <input
+                      type={showConfirmPassword ? "text" : "password"}
+                      value={form.confirmPassword}
+                      onChange={e => update("confirmPassword", e.target.value)}
+                      placeholder="Repeat your password"
+                      className={`input pr-10 ${errors.confirmPassword ? "border-red-400 focus:ring-red-400" : ""}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOffIcon className="w-5 h-5" />
+                      ) : (
+                        <EyeIcon className="w-5 h-5" />
+                      )}
+                    </button>
+                  </div>
                   {errors.confirmPassword && <p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>}
                 </div>
               )}
@@ -252,7 +422,11 @@ export default function AuthPage() {
               {/* Forgot password link */}
               {isLogin && (
                 <div className="text-right">
-                  <button type="button" className="text-xs text-blue-600 hover:text-blue-800 transition-colors">
+                  <button 
+                    type="button" 
+                    onClick={() => setShowForgotModal(true)}
+                    className="text-xs text-blue-600 hover:text-blue-800 transition-colors"
+                  >
                     Forgot password?
                   </button>
                 </div>
@@ -271,21 +445,14 @@ export default function AuthPage() {
               </button>
             </form>
 
-            {/* Divider */}
-            <div className="flex items-center gap-3 my-5">
-              <div className="flex-1 h-px bg-slate-100" />
-              <span className="text-xs text-slate-400">or</span>
-              <div className="flex-1 h-px bg-slate-100" />
-            </div>
-
             {/* Switch mode */}
-            <p className="text-center text-sm text-slate-500">
+            <p className="text-center text-sm text-slate-500 dark:text-slate-400 mt-5">
               {isLogin ? "Don't have an account?" : "Already have an account?"}
               {" "}
               <button
                 type="button"
                 onClick={() => switchMode(!isLogin)}
-                className="text-blue-600 font-semibold hover:text-blue-800 transition-colors"
+                className="text-blue-500 font-semibold hover:text-blue-600 transition-colors"
               >
                 {isLogin ? "Sign up free" : "Log in"}
               </button>
@@ -293,12 +460,179 @@ export default function AuthPage() {
           </div>
 
           {/* Terms */}
-          <p className="text-center text-xs text-slate-400 mt-4 px-4">
+          <p className="text-center text-xs text-slate-400 dark:text-slate-500 mt-4 px-4">
             By continuing, you agree to SkillSync's Terms of Service and Privacy Policy.
           </p>
         </div>
       </div>
+
+      {/* Forgot Password Modal */}
+      {showForgotModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md p-8 border border-slate-200 dark:border-slate-800">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">
+                {forgotStep === 1 && "Reset Password"}
+                {forgotStep === 2 && "Enter OTP"}
+                {forgotStep === 3 && "New Password"}
+              </h2>
+              <button
+                onClick={closeForgotModal}
+                className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+              >
+                <CloseIcon className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Step 1: Email */}
+            {forgotStep === 1 && (
+              <form onSubmit={handleForgotPassword} className="space-y-4">
+                <p className="text-slate-500 text-sm">
+                  Enter your email address and we'll send you an OTP to reset your password.
+                </p>
+                <div>
+                  <label className="label">Email Address</label>
+                  <input
+                    type="email"
+                    value={forgotEmail}
+                    onChange={e => setForgotEmail(e.target.value)}
+                    placeholder="arjun@example.com"
+                    className="input"
+                    required
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="btn-primary w-full"
+                >
+                  {loading ? <><Spinner /> Sending OTP...</> : "Send OTP"}
+                </button>
+              </form>
+            )}
+
+            {/* Step 2: OTP */}
+            {forgotStep === 2 && (
+              <form onSubmit={handleVerifyOTP} className="space-y-4">
+                <p className="text-slate-500 text-sm">
+                  We've sent a 6-digit OTP to <strong>{forgotEmail}</strong>. Enter it below.
+                </p>
+                <div>
+                  <label className="label">OTP Code</label>
+                  <input
+                    type="text"
+                    value={forgotOTP}
+                    onChange={e => setForgotOTP(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="123456"
+                    className="input text-center text-2xl tracking-widest"
+                    maxLength={6}
+                    required
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="btn-primary w-full"
+                >
+                  {loading ? <><Spinner /> Verifying...</> : "Verify OTP"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setForgotStep(1)}
+                  className="w-full text-sm text-slate-500 hover:text-slate-700 transition-colors"
+                >
+                  Back to email
+                </button>
+              </form>
+            )}
+
+            {/* Step 3: New Password */}
+            {forgotStep === 3 && (
+              <form onSubmit={handleResetPassword} className="space-y-4">
+                <p className="text-slate-500 text-sm">
+                  Create a new password for your account.
+                </p>
+                <div>
+                  <label className="label">New Password</label>
+                  <div className="relative">
+                    <input
+                      type={showNewPassword ? "text" : "password"}
+                      value={newPassword}
+                      onChange={e => setNewPassword(e.target.value)}
+                      placeholder="Minimum 8 characters"
+                      className="input pr-10"
+                      minLength={8}
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                    >
+                      {showNewPassword ? <EyeOffIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="label">Confirm New Password</label>
+                  <div className="relative">
+                    <input
+                      type={showConfirmNewPassword ? "text" : "password"}
+                      value={confirmNewPassword}
+                      onChange={e => setConfirmNewPassword(e.target.value)}
+                      placeholder="Repeat your password"
+                      className="input pr-10"
+                      minLength={8}
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                    >
+                      {showConfirmNewPassword ? <EyeOffIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
+                    </button>
+                  </div>
+                </div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="btn-primary w-full"
+                >
+                  {loading ? <><Spinner /> Resetting...</> : "Reset Password"}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+// ── Icons ────────────────────────────────────────────────────
+function EyeIcon({ className }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+    </svg>
+  );
+}
+
+function EyeOffIcon({ className }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+    </svg>
+  );
+}
+
+function CloseIcon({ className }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+    </svg>
   );
 }
 

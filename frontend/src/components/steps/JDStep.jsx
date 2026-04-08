@@ -22,8 +22,15 @@ export default function JDStep({ onNext, onBack }) {
       setJdData(result);
       toast.success("JD analyzed successfully!");
     } catch (err) {
-      toast.error("Failed to analyze JD. Check your Anthropic API key.");
-      console.error(err);
+      const errorMsg = err?.message || "";
+      if (errorMsg.includes("VITE_GROQ_KEY is missing")) {
+        toast.error("Groq API key is missing. Check your frontend/.env file.");
+      } else if (errorMsg.includes("401") || errorMsg.includes("Unauthorized")) {
+        toast.error("Invalid Groq API key. Please check your VITE_GROQ_KEY.");
+      } else {
+        toast.error(`Failed to analyze JD: ${errorMsg}`);
+      }
+      console.error("JD Analysis Error:", err);
     } finally {
       setLoading(false);
     }
@@ -31,7 +38,7 @@ export default function JDStep({ onNext, onBack }) {
 
   return (
     <div className="space-y-5">
-      <p className="text-sm text-slate-500">
+      <p className="text-sm text-slate-500 dark:text-slate-400">
         Paste the full job description below. Our AI will extract keywords,
         required skills, and domain information to tailor your resume.
       </p>
@@ -55,10 +62,10 @@ Requirements:
 ..."
         />
         <div className="flex justify-between mt-1">
-          <span className="text-xs text-slate-400">
+          <span className="text-xs text-slate-400 dark:text-slate-500">
             Minimum 100 characters
           </span>
-          <span className={`text-xs ${jdText.length >= 100 ? "text-green-500" : "text-slate-400"}`}>
+          <span className={`text-xs ${jdText.length >= 100 ? "text-green-500" : "text-slate-400 dark:text-slate-500"}`}>
             {jdText.length} characters
           </span>
         </div>
@@ -78,27 +85,27 @@ Requirements:
 
       {/* Results */}
       {jdData && (
-        <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 space-y-4 animate-fade-in">
+        <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 space-y-4 animate-fade-in">
 
           {/* Header */}
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-green-500 text-lg">✓</span>
-                <span className="font-bold text-slate-800">
+                <span className="font-bold text-slate-800 dark:text-slate-100">
                   {jdData.title || "Position Analyzed"}
                 </span>
               </div>
               {jdData.company && (
-                <div className="text-sm text-slate-500 mt-0.5">@ {jdData.company}</div>
+                <div className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">@ {jdData.company}</div>
               )}
             </div>
             <div className="flex gap-2 flex-wrap justify-end">
               {jdData.domain && (
-                <span className="badge bg-blue-100 text-blue-700">{jdData.domain}</span>
+                <span className="badge bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300">{jdData.domain}</span>
               )}
               {jdData.seniority && (
-                <span className="badge bg-purple-100 text-purple-700">{jdData.seniority}</span>
+                <span className="badge bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300">{jdData.seniority}</span>
               )}
             </div>
           </div>
@@ -109,7 +116,7 @@ Requirements:
               <div className="label mb-2">Extracted Keywords ({jdData.keywords.length})</div>
               <div className="flex flex-wrap gap-1.5">
                 {jdData.keywords.map((k, i) => (
-                  <span key={i} className="badge bg-blue-50 text-blue-700 border border-blue-200">
+                  <span key={i} className="badge bg-blue-50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30">
                     {k}
                   </span>
                 ))}
@@ -123,7 +130,7 @@ Requirements:
               <div className="label mb-2">Required Skills ({jdData.skills.length})</div>
               <div className="flex flex-wrap gap-1.5">
                 {jdData.skills.map((s, i) => (
-                  <span key={i} className="badge bg-green-50 text-green-700 border border-green-200">
+                  <span key={i} className="badge bg-green-50 dark:bg-green-500/20 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-500/30">
                     {s}
                   </span>
                 ))}
@@ -133,9 +140,9 @@ Requirements:
 
           {/* Summary */}
           {jdData.summary && (
-            <div className="bg-white rounded-lg p-3 border border-slate-200">
+            <div className="bg-white dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700">
               <div className="label mb-1">AI Summary</div>
-              <p className="text-sm text-slate-600">{jdData.summary}</p>
+              <p className="text-sm text-slate-600 dark:text-slate-300">{jdData.summary}</p>
             </div>
           )}
 

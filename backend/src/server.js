@@ -43,7 +43,14 @@ app.use(cors({
 
 // ── Other middleware ───────────────────────────────────────────
 app.use(helmet({ crossOriginResourcePolicy: false }));
-app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }));
+const isProd = process.env.NODE_ENV === "production";
+app.use(rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: isProd ? 100 : 10000,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => !isProd,
+}));
 app.use(express.json({ limit: "2mb" }));
 
 // ── Routes ─────────────────────────────────────────────────────

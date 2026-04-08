@@ -16,10 +16,21 @@ const experienceSchema = new mongoose.Schema({
   bullets: [String],
 });
 
+const projectSchema = new mongoose.Schema({
+  name: String,
+  description: String,
+  technologies: [String],
+  highlights: [String],
+  url: String,
+});
+
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true },
   email: { type: String, required: true, unique: true, lowercase: true, index: true },
-  passwordHash: { type: String, required: true },
+  passwordHash: { type: String, required: function() { return !this.googleId; } },
+  googleId: { type: String, sparse: true, index: true },
+  resetOTP: { type: String },
+  resetOTPExpires: { type: Date },
   profile: {
     title:    String,
     phone:    String,
@@ -32,6 +43,7 @@ const userSchema = new mongoose.Schema({
     education:   [educationSchema],
     achievements:[String],
     experience:  [experienceSchema],
+    projects:    [projectSchema],
   },
 }, { timestamps: true });
 
