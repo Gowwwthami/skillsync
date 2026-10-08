@@ -15,14 +15,21 @@ import { errorHandler } from "./middleware/error.middleware.js";
 validateConfig();
 
 const app = express();
+<<<<<<< HEAD
 app.set("trust proxy", 1);
+=======
+>>>>>>> 80a45f46527bb606f2e8f17b5c61a432b7d46a20
 
 // ── CORS — allow both localhost ports and production ───────────
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:5174",
   "http://localhost:3000",
+<<<<<<< HEAD
   ...(config.corsOrigin ? [config.corsOrigin] : []),
+=======
+  "https://skillsync.vercel.app",
+>>>>>>> 80a45f46527bb606f2e8f17b5c61a432b7d46a20
 ];
 
 app.use(cors({
