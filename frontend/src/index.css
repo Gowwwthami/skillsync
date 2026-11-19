@@ -1,5 +1,26 @@
 @import "tailwindcss";
 
+/* ── Tailwind v4 theme config (replaces tailwind.config.js) ── */
+@theme {
+  --font-sans: "Inter", system-ui, sans-serif;
+
+  --animate-fade-in: fadeIn 0.3s ease-in-out;
+  --animate-slide-up: slideUp 0.3s ease-out;
+
+  @keyframes fadeIn {
+    0%   { opacity: 0; }
+    100% { opacity: 1; }
+  }
+
+  @keyframes slideUp {
+    0%   { opacity: 0; transform: translateY(10px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+}
+
+/* Dark mode via class strategy */
+@variant dark (&:where(.dark, .dark *));
+
 @layer base {
   * {
     box-sizing: border-box;
