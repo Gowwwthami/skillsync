@@ -8,7 +8,7 @@
 // ─────────────────────────────────────────────────────────────
 
 const GROQ_API   = "https://api.groq.com/openai/v1/chat/completions";
-const GROQ_MODEL = "llama3-8b-8192";
+const GROQ_MODEL = "llama-3.1-8b-instant";
 
 // ── Base Groq call ─────────────────────────────────────────────
 async function callGroq(systemPrompt, userPrompt, maxTokens = 1500) {

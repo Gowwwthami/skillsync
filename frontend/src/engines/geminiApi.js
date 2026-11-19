@@ -8,7 +8,7 @@
 //   - Generates improved summary paragraph
 // ─────────────────────────────────────────────────────────────
 
-const GEMINI_API = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+const GEMINI_API = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent";
 
 // ── Base Gemini call ───────────────────────────────────────────
 async function callGemini(prompt, maxTokens = 1500) {
