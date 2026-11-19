@@ -17,20 +17,27 @@ validateConfig();
 const app = express();
 app.set("trust proxy", 1);
 
-// ── CORS — allow both localhost ports and production ───────────
-const allowedOrigins = [
+// ── CORS — allow localhost, FRONTEND_URL env var, and *.vercel.app ──────
+const exactOrigins = [
   "http://localhost:5173",
   "http://localhost:5174",
   "http://localhost:3000",
-  ...(config.corsOrigin ? [config.corsOrigin] : []),
+  ...(config.corsOrigin  ? [config.corsOrigin]  : []),
+  ...(config.frontendUrl ? [config.frontendUrl] : []),
 ];
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (Postman, mobile apps)
+    // Allow requests with no origin (Postman, curl, mobile apps)
     if (!origin) return callback(null, true);
 
-    if (allowedOrigins.includes(origin)) {
+    // Exact-match whitelist (localhost + env-var overrides)
+    if (exactOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    // Allow any Vercel preview / production domain: *.vercel.app
+    if (/\.vercel\.app$/.test(origin)) {
       return callback(null, true);
     }
 

@@ -11,6 +11,7 @@ export const config = {
   groqKey:           process.env.GROQ_API_KEY || process.env.VITE_GROQ_KEY,
   nodeEnv:           process.env.NODE_ENV             || "development",
   corsOrigin:        process.env.CORS_ORIGIN          || "http://localhost:5173",
+  frontendUrl:       process.env.FRONTEND_URL,
   appName:           process.env.APP_NAME             || "SkillSync",
   
   // Email configuration
